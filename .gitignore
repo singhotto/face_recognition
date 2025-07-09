@@ -1,0 +1,7 @@
+/dataset
+/log
+/__pycache__
+/results
+run_pytorch.slurm
+convert_wider
+/otto_images
