@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.transforms import functional as TF
+from torchvision.transforms import functional as F
 from PIL import Image
 import pickle
 from collections import OrderedDict

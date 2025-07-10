@@ -19,7 +19,7 @@ import random
 # for idx in random.sample(range(0, 1400), 100):
 #     detector.predict_one(idx=idx)
 
-# detector = FaceDetector()
+detector = FaceDetector()
 
 # Create output directory if it doesn't exist
 # os.makedirs(output_dir, exist_ok=True)
@@ -41,7 +41,10 @@ import random
 #             print(f"Error processing {filename}: {e}")
 
 recognizer = FaceRecognizer(
-    img_dir="dataset/rec/Faces"
+    # img_dir="dataset/rec/Faces"
+    detector=detector
 )
 
-recognizer.train(epochs=1)
+# recognizer.train(epochs=1)
+
+recognizer.predict('otto_images/otto_1.jpeg')
