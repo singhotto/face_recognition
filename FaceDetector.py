@@ -112,8 +112,6 @@ class FaceDetector:
                 images, targets = images.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
-                print("Pred shape:", outputs.shape)
-                print("Target shape:", targets.shape)
 
                 loss = self.criterion(outputs, targets)
                 loss.backward()

@@ -9,12 +9,16 @@ from PIL import Image
 import pickle
 from collections import OrderedDict
 from resnet.resnet import ResNet
-from FRDataset import TripletFRDataset  # Should yield (anchor, positive, negative)
 
 class FaceRecognizer:
     def __init__(self, img_dir=None, embedding_store_path="embeddings/embeddings.pkl", 
-                 batch_size=32, lr=1e-3, device=None, face_detector=None):
-        self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                 batch_size=32, lr=1e-3, face_detector=None):
+        
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.img_dir = img_dir
         self.face_detector = face_detector
         self.embedding_store_path = embedding_store_path
@@ -33,7 +37,7 @@ class FaceRecognizer:
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
         if img_dir:
-            from FRDataset import TripletFRDataset  # dynamic import
+            from TripletFRDataset import TripletFRDataset  # dynamic import
             self.dataset = TripletFRDataset(img_dir, transform=self.transform)
             self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=True)
 

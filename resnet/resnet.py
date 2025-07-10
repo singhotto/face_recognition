@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from .block import block
 
 class ResNet(nn.Module):
-    def __init__(self, n, num_classes, shortcuts=True):
+    def __init__(self, n, shortcuts=True):
         super().__init__()
         self.shortcuts = shortcuts
         
