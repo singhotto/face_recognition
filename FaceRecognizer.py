@@ -44,7 +44,7 @@ class FaceRecognizer:
         self.load_checkpoint()
 
         # Load stored reference embeddings if available
-        self.reference_embeddings = self._load_embeddings()
+        #self.reference_embeddings = self._load_embeddings()
 
     def train(self, epochs=10):
         self.model.train()
