@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.transforms import functional as F
+import torch.nn.functional as F
 from PIL import Image
 import pickle
 from collections import OrderedDict
@@ -71,7 +71,7 @@ class FaceRecognizer:
             self.save_checkpoint(epoch+1, total_loss)
 
         self.build_reference_embeddings()
-
+        
     def build_reference_embeddings(self):
         """Save mean embeddings per label for inference."""
         from FRDataset import FRDataset
@@ -95,37 +95,49 @@ class FaceRecognizer:
         for label in label_embeddings:
             label_embeddings[label] = torch.mean(torch.stack(label_embeddings[label]), dim=0)
 
+        # Save both embeddings and label_map
+        to_save = {
+            "embeddings": label_embeddings,
+            "label_map": {v: k for k, v in dataset.label_map.items()}  # reverse map
+        }
+
         with open(self.embedding_store_path, 'wb') as f:
-            pickle.dump(label_embeddings, f)
+            pickle.dump(to_save, f)
+        
         print(f"✅ Stored {len(label_embeddings)} label embeddings.")
 
         self.reference_embeddings = label_embeddings
+        self.label_to_name = to_save["label_map"]
 
     def predict(self, img_path, threshold=0.6):
         self.model.eval()
         img = Image.open(img_path).convert("RGB")
         if self.face_detector:
-            img = self.face_detector(img)  # assume it crops the face
+            img = self.face_detector.get_face(img)  # assume it crops the face
 
         img = self.transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             emb = self.model(img).cpu()
-
         if not self.reference_embeddings:
             raise ValueError("❌ No stored embeddings. Please train or load reference embeddings.")
 
+        # Flatten emb once
+        emb = emb.view(-1)  # Now shape: [64]
+
         similarities = {
-            label: F.cosine_similarity(emb, ref_emb.unsqueeze(0)).item()
+            label: F.cosine_similarity(emb, ref_emb.view(-1), dim=0).item()
             for label, ref_emb in self.reference_embeddings.items()
         }
-
+        
         # Get best match
         best_label, best_score = max(similarities.items(), key=lambda x: x[1])
 
         if best_score > threshold:
-            return best_label, best_score
+            name = self.label_to_name.get(best_label, f"Label {best_label}")
+            return name, best_score
         else:
             return "Unknown", best_score
+
 
     def save_checkpoint(self, epoch, loss, path='checkpoints/face_recognizer.pth'):
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -159,8 +171,10 @@ class FaceRecognizer:
             print(f"⚠️ Checkpoint not found at {path}")
 
     def _load_embeddings(self):
-        if os.path.exists(self.embedding_store_path):
-            with open(self.embedding_store_path, 'rb') as f:
-                print(f"✅ Loaded reference embeddings from {self.embedding_store_path}")
-                return pickle.load(f)
-        return {}
+        """Load precomputed embeddings and label names."""
+        with open(self.embedding_store_path, 'rb') as f:
+            data = pickle.load(f)
+            self.reference_embeddings = data["embeddings"]
+            self.label_to_name = data["label_map"]  # maps int → name
+        print(f"✅ Loaded {len(self.reference_embeddings)} reference embeddings.")
+

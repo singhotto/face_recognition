@@ -42,9 +42,10 @@ detector = FaceDetector()
 
 recognizer = FaceRecognizer(
     # img_dir="dataset/rec/Faces"
-    detector=detector
+    face_detector=detector
 )
 
 # recognizer.train(epochs=1)
 
-recognizer.predict('otto_images/otto_1.jpeg')
+val = recognizer.predict('otto_images/otto_1.jpeg')
+print(val)
