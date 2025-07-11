@@ -9,6 +9,7 @@ from PIL import Image
 import pickle
 from collections import OrderedDict
 from resnet.resnet import ResNet
+import cv2
 
 class FaceRecognizer:
     def __init__(self, img_dir=None, embedding_store_path="embeddings/embeddings.pkl", 
@@ -44,7 +45,7 @@ class FaceRecognizer:
         self.load_checkpoint()
 
         # Load stored reference embeddings if available
-        #self.reference_embeddings = self._load_embeddings()
+        self._load_embeddings()
 
     def train(self, epochs=10):
         self.model.train()
@@ -109,12 +110,7 @@ class FaceRecognizer:
         self.reference_embeddings = label_embeddings
         self.label_to_name = to_save["label_map"]
 
-    def predict(self, img_path, threshold=0.6):
-        self.model.eval()
-        img = Image.open(img_path).convert("RGB")
-        if self.face_detector:
-            img = self.face_detector.get_face(img)  # assume it crops the face
-
+    def predict_rgb(self, img, threshold=0.6):
         img = self.transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
             emb = self.model(img).cpu()
@@ -137,6 +133,14 @@ class FaceRecognizer:
             return name, best_score
         else:
             return "Unknown", best_score
+
+    def predict(self, img_path, threshold=0.6):
+        self.model.eval()
+        img = Image.open(img_path).convert("RGB")
+        if self.face_detector:
+            img = self.face_detector.get_face(img)  # assume it crops the face
+
+        return self.predict_rgb(img)
 
 
     def save_checkpoint(self, epoch, loss, path='checkpoints/face_recognizer.pth'):
@@ -178,3 +182,44 @@ class FaceRecognizer:
             self.label_to_name = data["label_map"]  # maps int → name
         print(f"✅ Loaded {len(self.reference_embeddings)} reference embeddings.")
 
+    def detect_from_camera(self):
+        self.model.eval()
+        cap = cv2.VideoCapture(0)  # 0 for default webcam
+
+        if not cap.isOpened():
+            print("Error: Could not access the camera.")
+            return
+
+        print("Starting real-time detection. Press 'q' to quit.")
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame.")
+                break
+
+            orig_h, orig_w, _ = frame.shape
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image = Image.fromarray(image)
+
+            result = self.face_detector.predict_rgb(image)
+
+            if result is not None:
+                x1, y1, x2, y2, conf, _, _, _ = result
+                x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+
+                label, conf = self.predict_rgb(image)
+                print(label, x1, y1, x2, y2)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f"Conf: {conf:.2f} Label: {label}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+            # Display frame
+            cv2.imshow("Face Recognizer", frame)
+
+            # ❗️ Allow pressing 'q' to quit
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                print("Quitting...")
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()

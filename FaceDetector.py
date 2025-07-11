@@ -191,6 +191,8 @@ class FaceDetector:
         orig_image = Image.open(img_path).convert("RGB")
         return self.predict_rgb(orig_image)
 
+    
+
     def detect_from_camera(self, confidence_threshold=0.5):
         self.model.eval()
         cap = cv2.VideoCapture(0)  # 0 for default webcam
