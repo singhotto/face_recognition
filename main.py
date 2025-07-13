@@ -45,7 +45,8 @@ recognizer = FaceRecognizer(
     # face_detector=detector
 )
 
-recognizer.train(epochs=1000)
+# recognizer.train(epochs=1000)
+recognizer.build_reference_embeddings()
 
 # val = recognizer.predict('otto_images/otto_1.jpeg')
 # print(val)
