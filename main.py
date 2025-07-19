@@ -41,14 +41,14 @@ detector = FaceDetector()
 #             print(f"Error processing {filename}: {e}")
 
 recognizer = FaceRecognizer(
-    img_dir="dataset/rec/Faces"
-    # face_detector=detector
+    # img_dir="dataset/rec/Faces"
+    face_detector=detector
 )
 
 # recognizer.train(epochs=1000)
-recognizer.build_reference_embeddings()
+# recognizer.build_reference_embeddings()
 
 # val = recognizer.predict('otto_images/otto_1.jpeg')
 # print(val)
 
-# recognizer.detect_from_camera()
+recognizer.detect_from_camera()
